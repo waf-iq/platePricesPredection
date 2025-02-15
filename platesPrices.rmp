@@ -13,13 +13,13 @@
     <parameter key="encoding" value="SYSTEM"/>
     <process expanded="true">
       <operator activated="true" class="retrieve" compatibility="11.0.000" expanded="true" height="68" name="Retrieve enhanced_plates_data" width="90" x="45" y="34">
-        <parameter key="repository_entry" value="data/enhanced_plates_data"/>
+        <parameter key="repository_entry" value="//Local Repository/data/enhanced_plates_data"/>
       </operator>
       <operator activated="true" class="blending:select_attributes" compatibility="11.0.000" expanded="true" height="82" name="Select Attributes" width="90" x="179" y="34">
         <parameter key="type" value="include attributes"/>
         <parameter key="attribute_filter_type" value="a subset"/>
         <parameter key="select_attribute" value=""/>
-        <parameter key="select_subset" value="character␞containsMemeNumber␞isCarModel␞isMemeNumber␞isPalindrome␞isYear␞number_of_digits␞number_of_X␞number_of_Y␞pattern␞price␞value_of_X␞value_of_Y␞number_of_zeros"/>
+        <parameter key="select_subset" value="containsMemeNumber␞containsSeries␞isCarModel␞isFullSeries␞isMemeNumber␞isPalindrome␞isYear␞number_of_digits␞number_of_X␞number_of_Y␞number_of_zeros␞pattern␞price␞value_of_X␞value_of_Y"/>
         <parameter key="also_apply_to_special_attributes_(id,_label..)" value="false"/>
       </operator>
       <operator activated="true" class="nominal_to_numerical" compatibility="11.0.000" expanded="true" height="103" name="Nominal to Numerical" width="90" x="313" y="34">
@@ -49,33 +49,44 @@
       </operator>
       <operator activated="true" class="blending:split_data" compatibility="11.0.000" expanded="true" height="103" name="Split Data" width="90" x="581" y="34">
         <enumeration key="partitions">
-          <parameter key="ratio" value="0.7"/>
-          <parameter key="ratio" value="0.3"/>
+          <parameter key="ratio" value="0.95"/>
+          <parameter key="ratio" value="0.05"/>
         </enumeration>
         <parameter key="sampling_type" value="automatic"/>
         <parameter key="use_local_random_seed" value="false"/>
         <parameter key="local_random_seed" value="1992"/>
       </operator>
-      <operator activated="true" class="linear_regression" compatibility="11.0.000" expanded="true" height="103" name="Linear Regression" width="90" x="715" y="34">
-        <parameter key="feature_selection" value="M5 prime"/>
-        <parameter key="alpha" value="0.05"/>
-        <parameter key="max_iterations" value="10"/>
-        <parameter key="forward_alpha" value="0.05"/>
-        <parameter key="backward_alpha" value="0.05"/>
-        <parameter key="eliminate_colinear_features" value="true"/>
-        <parameter key="min_tolerance" value="0.05"/>
-        <parameter key="use_bias" value="true"/>
-        <parameter key="ridge" value="1.0E-8"/>
+      <operator activated="true" class="h2o:gradient_boosted_trees" compatibility="11.0.000" expanded="true" height="103" name="Gradient Boosted Trees" width="90" x="715" y="34">
+        <parameter key="number_of_trees" value="5000"/>
+        <parameter key="reproducible" value="false"/>
+        <parameter key="maximum_number_of_threads" value="4"/>
+        <parameter key="use_local_random_seed" value="false"/>
+        <parameter key="local_random_seed" value="1992"/>
+        <parameter key="maximal_depth" value="15"/>
+        <parameter key="min_rows" value="10.0"/>
+        <parameter key="min_split_improvement" value="1.0E-5"/>
+        <parameter key="number_of_bins" value="20"/>
+        <parameter key="learning_rate" value="0.01"/>
+        <parameter key="sample_rate" value="1.0"/>
+        <parameter key="distribution" value="AUTO"/>
+        <parameter key="early_stopping" value="false"/>
+        <parameter key="stopping_rounds" value="1"/>
+        <parameter key="stopping_metric" value="AUTO"/>
+        <parameter key="stopping_tolerance" value="0.001"/>
+        <list key="monotone_constraints"/>
+        <parameter key="max_runtime_seconds" value="0"/>
+        <list key="expert_parameters"/>
       </operator>
-      <operator activated="true" class="apply_model" compatibility="11.0.000" expanded="true" height="82" name="Apply Model" width="90" x="514" y="187">
+      <operator activated="true" class="model_simulator:model_simulator" compatibility="10.5.000" expanded="true" height="103" name="Model Simulator" width="90" x="849" y="34"/>
+      <operator activated="true" class="apply_model" compatibility="11.0.000" expanded="true" height="82" name="Apply Model" width="90" x="715" y="187">
         <list key="application_parameters"/>
       </operator>
-      <operator activated="true" class="performance_regression" compatibility="11.0.000" expanded="true" height="82" name="Performance" width="90" x="715" y="187">
+      <operator activated="true" class="performance_regression" compatibility="11.0.000" expanded="true" height="82" name="Performance" width="90" x="983" y="187">
         <parameter key="main_criterion" value="first"/>
         <parameter key="root_mean_squared_error" value="false"/>
         <parameter key="absolute_error" value="false"/>
         <parameter key="relative_error" value="true"/>
-        <parameter key="relative_error_lenient" value="false"/>
+        <parameter key="relative_error_lenient" value="true"/>
         <parameter key="relative_error_strict" value="false"/>
         <parameter key="normalized_absolute_error" value="false"/>
         <parameter key="root_relative_squared_error" value="false"/>
@@ -92,18 +103,24 @@
       <connect from_op="Select Attributes" from_port="example set output" to_op="Nominal to Numerical" to_port="example set input"/>
       <connect from_op="Nominal to Numerical" from_port="example set output" to_op="Set Role" to_port="example set input"/>
       <connect from_op="Set Role" from_port="example set output" to_op="Split Data" to_port="example set"/>
-      <connect from_op="Split Data" from_port="partition 1" to_op="Linear Regression" to_port="training set"/>
+      <connect from_op="Split Data" from_port="partition 1" to_op="Gradient Boosted Trees" to_port="training set"/>
       <connect from_op="Split Data" from_port="partition 2" to_op="Apply Model" to_port="unlabelled data"/>
-      <connect from_op="Linear Regression" from_port="model" to_op="Apply Model" to_port="model"/>
+      <connect from_op="Gradient Boosted Trees" from_port="model" to_op="Model Simulator" to_port="model"/>
+      <connect from_op="Gradient Boosted Trees" from_port="exampleSet" to_op="Model Simulator" to_port="training data"/>
+      <connect from_op="Gradient Boosted Trees" from_port="weights" to_port="result 4"/>
+      <connect from_op="Model Simulator" from_port="simulator output" to_port="result 3"/>
+      <connect from_op="Model Simulator" from_port="model output" to_op="Apply Model" to_port="model"/>
       <connect from_op="Apply Model" from_port="labelled data" to_op="Performance" to_port="labelled data"/>
-      <connect from_op="Apply Model" from_port="model" to_port="result 2"/>
+      <connect from_op="Apply Model" from_port="model" to_port="result 5"/>
       <connect from_op="Performance" from_port="performance" to_port="result 1"/>
-      <connect from_op="Performance" from_port="example set" to_port="result 3"/>
+      <connect from_op="Performance" from_port="example set" to_port="result 2"/>
       <portSpacing port="source_input 1" spacing="0"/>
       <portSpacing port="sink_result 1" spacing="0"/>
       <portSpacing port="sink_result 2" spacing="0"/>
       <portSpacing port="sink_result 3" spacing="0"/>
       <portSpacing port="sink_result 4" spacing="0"/>
+      <portSpacing port="sink_result 5" spacing="0"/>
+      <portSpacing port="sink_result 6" spacing="0"/>
     </process>
   </operator>
 </process>
